@@ -12,6 +12,7 @@ from .image_processor import ocr_image_file
 from .text_cleaner    import clean_text
 from .doc_classifier  import classify_document
 from .entity_extractor import extract_entities
+from .chunker import chunk_pages
 
 logger = logging.getLogger(__name__)
 

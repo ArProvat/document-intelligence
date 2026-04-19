@@ -10,3 +10,8 @@ pytesseract
 Pillow
 numpy
 pydantic
+langchain
+langchain-community
+langchain-core
+langchain-openai
+langchain-chroma
