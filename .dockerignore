@@ -1,0 +1,12 @@
+.git
+.gitignore
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+chroma_langchain_db/
+bm25_store/
+uploads/
+processed/

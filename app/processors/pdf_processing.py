@@ -6,7 +6,7 @@ import fitz                          # PyMuPDF
 import pdfplumber
 from pdf2image import convert_from_path
 
-from ...config import (
+from config import (
     NATIVE_TEXT_MIN_CHARS, MIN_TEXT_LENGTH_PER_PAGE,
     OCR_DPI, OCR_CONFIDENCE_THRESHOLD,
 )

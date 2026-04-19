@@ -3,7 +3,7 @@ from typing import List
 
 from langchain_core.documents import Document
 
-from ...config import CHUNK_SIZE_CHARS, CHUNK_OVERLAP_CHARS
+from config import CHUNK_SIZE_CHARS, CHUNK_OVERLAP_CHARS
 from app.models.schemas import DocumentChunk, PageResult, ProcessedDocument
 
 
