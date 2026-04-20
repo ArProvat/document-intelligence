@@ -3,7 +3,7 @@ import tempfile
 from pathlib import Path
 from typing import List
 
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import BackgroundTasks, FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models.api_schemas import (
@@ -14,6 +14,7 @@ from app.models.api_schemas import (
     DraftResponse,
     DraftFeedbackRequest,
     DraftFeedbackResponse,
+    RuleDeleteResponse,
     StyleRule,
     DraftType,
 )
@@ -154,28 +155,66 @@ async def generate_draft(session_id: str, req: DraftRequest):
 
 
 @app.post("/drafts/{draft_id}/feedback", response_model=DraftFeedbackResponse)
-async def submit_draft_feedback(draft_id: str, req: DraftFeedbackRequest):
+async def submit_draft_feedback(
+    draft_id: str,
+    req: DraftFeedbackRequest,
+    background_tasks: BackgroundTasks,
+):
     try:
-        return draft_improvement_service.capture_feedback(
+        feedback_response = draft_improvement_service.submit_feedback_job(
             draft_id=draft_id,
             edited_draft=req.edited_draft,
             operator_notes=req.operator_notes,
         )
+        background_tasks.add_task(
+            draft_improvement_service.process_feedback_job,
+            feedback_response.feedback_id,
+        )
+        return feedback_response
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/feedback/{feedback_id}", response_model=DraftFeedbackResponse)
+async def get_feedback_status(feedback_id: str):
+    try:
+        return draft_improvement_service.get_feedback_status(feedback_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/users/{user_id}/style-rules", response_model=List[StyleRule])
 async def list_style_rules(user_id: str, draft_type: DraftType | None = None):
-    rules = draft_improvement_service.store.list_rules_for_user(user_id)
-    if draft_type is not None:
-        rules = [
-            rule
-            for rule in rules
-            if not rule.applicable_draft_types or draft_type in rule.applicable_draft_types
-        ]
-    rules.sort(key=lambda rule: (-rule.confidence, -rule.support_count, rule.description))
-    return [draft_improvement_service._to_public_rule(rule) for rule in rules]
+    return draft_improvement_service.list_rules_for_user(
+        user_id=user_id,
+        draft_type=draft_type,
+        include_disabled=True,
+    )
+
+
+@app.post("/users/{user_id}/style-rules/{rule_id}/disable", response_model=StyleRule)
+async def disable_style_rule(user_id: str, rule_id: str):
+    try:
+        return draft_improvement_service.disable_rule(user_id, rule_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/users/{user_id}/style-rules/{rule_id}/enable", response_model=StyleRule)
+async def enable_style_rule(user_id: str, rule_id: str):
+    try:
+        return draft_improvement_service.enable_rule(user_id, rule_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.delete("/users/{user_id}/style-rules/{rule_id}", response_model=RuleDeleteResponse)
+async def delete_style_rule(user_id: str, rule_id: str):
+    try:
+        draft_improvement_service.delete_rule_for_user(user_id, rule_id)
+        return RuleDeleteResponse(rule_id=rule_id, deleted=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 if __name__ == "__main__":
