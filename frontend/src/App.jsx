@@ -183,13 +183,13 @@ function App() {
           <p className="eyebrow">React Test Console</p>
           <h1>Document Intelligence API Runner</h1>
           <p className="lede">
-            Create a session, upload PDFs or images, then generate a grounded draft
+            Create a session, upload PDFs, Excel sheets, or images, then generate a grounded draft
             without switching back to Swagger.
           </p>
         </div>
         <div className="hero-meta">
           <span className="meta-chip">API base: {API_BASE}</span>
-          <span className="meta-chip">Allowed files: pdf, png, jpg, jpeg, tiff, tif, bmp, webp</span>
+          <span className="meta-chip">Allowed files: pdf, xlsx, png, jpg, jpeg, tiff, tif, bmp, webp</span>
         </div>
       </div>
 
@@ -271,7 +271,7 @@ function App() {
             <input
               type="file"
               multiple
-              accept=".pdf,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.webp"
+              accept=".pdf,.xlsx,.png,.jpg,.jpeg,.tiff,.tif,.bmp,.webp"
               onChange={(event) => setSelectedFiles(Array.from(event.target.files || []))}
             />
           </label>

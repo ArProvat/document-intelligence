@@ -16,5 +16,7 @@ langchain-community
 langchain-core
 langchain-openai
 langchain-chroma
+openai
+openpyxl
 flashrank
 rank_bm25
