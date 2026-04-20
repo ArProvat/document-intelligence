@@ -12,6 +12,10 @@ from app.models.api_schemas import (
     SessionUploadResponse,
     DraftRequest,
     DraftResponse,
+    DraftFeedbackRequest,
+    DraftFeedbackResponse,
+    StyleRule,
+    DraftType,
 )
 from app.models.schemas import UploadResponse
 from app.processors.document_processor import process_document
@@ -22,6 +26,7 @@ from app.services.session_store import InMemorySessionStore
 from app.services.document_store import InMemoryDocumentStore
 from app.services.session_ingest_service import SessionIngestService
 from app.services.draft_generation import DraftGenerationService
+from app.services.draft_improvement import DraftImprovementService, DraftImprovementStore
 
 app = FastAPI(title="Legal Grounded Drafting API")
 
@@ -57,16 +62,18 @@ hybrid_retriever = HybridSessionRetriever(
     top_n=8,
 )
 
-draft_service = DraftGenerationService(hybrid_retriever)
+draft_improvement_store = DraftImprovementStore()
+draft_improvement_service = DraftImprovementService(draft_improvement_store)
+draft_service = DraftGenerationService(hybrid_retriever, draft_improvement_service)
 
 
 @app.get("/health")
-def health():
+async def health():
     return {"status": "ok"}
 
 
 @app.post("/sessions", response_model=SessionResponse)
-def create_session(req: CreateSessionRequest):
+async def create_session(req: CreateSessionRequest):
     session = session_store.create_session(req.user_id)
     return SessionResponse(
         session_id=session.session_id,
@@ -127,7 +134,7 @@ async def upload_files(session_id: str, files: List[UploadFile] = File(...)):
 
 
 @app.post("/sessions/{session_id}/drafts", response_model=DraftResponse)
-def generate_draft(session_id: str, req: DraftRequest):
+async def generate_draft(session_id: str, req: DraftRequest):
     session = session_store.get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
@@ -139,10 +146,36 @@ def generate_draft(session_id: str, req: DraftRequest):
         )
 
     return draft_service.generate_draft(
+        user_id=session.user_id,
         session_id=session_id,
         draft_type=req.draft_type,
         instructions=req.instructions,
     )
+
+
+@app.post("/drafts/{draft_id}/feedback", response_model=DraftFeedbackResponse)
+async def submit_draft_feedback(draft_id: str, req: DraftFeedbackRequest):
+    try:
+        return draft_improvement_service.capture_feedback(
+            draft_id=draft_id,
+            edited_draft=req.edited_draft,
+            operator_notes=req.operator_notes,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/users/{user_id}/style-rules", response_model=List[StyleRule])
+async def list_style_rules(user_id: str, draft_type: DraftType | None = None):
+    rules = draft_improvement_service.store.list_rules_for_user(user_id)
+    if draft_type is not None:
+        rules = [
+            rule
+            for rule in rules
+            if not rule.applicable_draft_types or draft_type in rule.applicable_draft_types
+        ]
+    rules.sort(key=lambda rule: (-rule.confidence, -rule.support_count, rule.description))
+    return [draft_improvement_service._to_public_rule(rule) for rule in rules]
 
 
 if __name__ == "__main__":

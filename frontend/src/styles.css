@@ -238,6 +238,66 @@ pre {
   white-space: pre-wrap;
 }
 
+.meta-list {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.rule-list,
+.diff-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.rule-card,
+.diff-card {
+  padding: 1rem;
+  border-radius: 18px;
+  background: rgba(255, 252, 247, 0.92);
+  border: 1px solid rgba(24, 32, 40, 0.08);
+}
+
+.rule-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+  color: #465662;
+}
+
+.rule-card p {
+  margin: 0 0 0.55rem;
+}
+
+.rule-card span {
+  color: #63707a;
+}
+
+.diff-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.diff-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  color: #58636d;
+}
+
+.diff-card pre {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 0.85rem;
+  border-radius: 14px;
+  background: #162734;
+  color: #edf3f8;
+  white-space: pre-wrap;
+}
+
 .evidence-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -276,6 +336,7 @@ pre {
   .hero,
   .panel-header,
   .draft-grid,
+  .diff-grid,
   .grid {
     grid-template-columns: 1fr;
     display: grid;

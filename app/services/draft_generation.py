@@ -6,8 +6,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 
-from app.models.api_schemas import DraftType, EvidenceItem, DraftResponse
+from app.models.api_schemas import DraftResponse, DraftType, EvidenceItem
 from app.retrieval.hybrid_search import HybridSessionRetriever
+from app.services.draft_improvement import DraftImprovementService
 
 
 DRAFT_TYPE_GUIDANCE = {
@@ -35,8 +36,13 @@ DRAFT_TYPE_GUIDANCE = {
 
 
 class DraftGenerationService:
-    def __init__(self, retriever: HybridSessionRetriever):
+    def __init__(
+        self,
+        retriever: HybridSessionRetriever,
+        improvement_service: DraftImprovementService,
+    ):
         self.retriever = retriever
+        self.improvement_service = improvement_service
 
         self.query_llm = ChatOpenAI(
             model="gpt-4o-mini",
@@ -81,12 +87,16 @@ Task guidance:
 Operator instructions:
 {instructions}
 
+OPERATOR STYLE PREFERENCES:
+{style_preferences}
+
 Rules:
 - Use only the evidence below.
 - Do not invent facts.
 - If information is missing, unclear, or conflicting, say so explicitly.
 - Keep the draft useful as a first pass.
 - Base important statements on the retrieved evidence.
+- Apply operator style preferences only when they do not conflict with the evidence.
 
 Evidence:
 {evidence}
@@ -119,6 +129,7 @@ Write the draft now.
 
     def generate_draft(
         self,
+        user_id: str,
         session_id: str,
         draft_type: DraftType,
         instructions: str | None = None,
@@ -137,12 +148,17 @@ Write the draft now.
         docs = rerank_retriever.invoke(retrieval_query)
 
         evidence_text = self._format_evidence(docs)
+        style_preferences, applied_rules = self.improvement_service.format_rules_for_prompt(
+            user_id=user_id,
+            draft_type=draft_type,
+        )
 
         draft = self.draft_chain.invoke(
             {
                 "draft_type": draft_type.value,
                 "draft_guidance": guidance,
                 "instructions": instructions or "None",
+                "style_preferences": style_preferences,
                 "evidence": evidence_text,
             }
         )
@@ -161,11 +177,24 @@ Write the draft now.
                 )
             )
 
+        draft_id = self.improvement_service.register_generated_draft(
+            user_id=user_id,
+            session_id=session_id,
+            draft_type=draft_type,
+            instructions=instructions,
+            retrieval_query=retrieval_query,
+            draft=draft,
+            evidence=evidence_items,
+            applied_rules=applied_rules,
+        )
+
         return DraftResponse(
+            draft_id=draft_id,
             session_id=session_id,
             draft_type=draft_type,
             retrieval_query=retrieval_query,
             draft=draft,
             evidence=evidence_items,
+            applied_rules=applied_rules,
             generated_at=datetime.now(timezone.utc),
         )

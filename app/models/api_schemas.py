@@ -1,6 +1,6 @@
+from datetime import datetime
 from enum import Enum
 from typing import List, Optional
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -13,6 +13,16 @@ class DraftType(str, Enum):
     NOTICE_RELATED_SUMMARY = "notice_related_summary"
     DOCUMENT_CHECKLIST = "document_checklist"
     INTERNAL_MEMO = "internal_memo"
+
+
+class StyleRuleCategory(str, Enum):
+    STRUCTURE = "structure"
+    TONE = "tone"
+    COMPLETENESS = "completeness"
+    CITATION_STYLE = "citation_style"
+    FORMATTING = "formatting"
+    ANALYSIS = "analysis"
+    OTHER = "other"
 
 
 class CreateSessionRequest(BaseModel):
@@ -49,10 +59,53 @@ class EvidenceItem(BaseModel):
     snippet: str
 
 
+class AppliedStyleRule(BaseModel):
+    rule_id: str
+    description: str
+    category: StyleRuleCategory
+    confidence: float
+
+
+class StyleRule(BaseModel):
+    rule_id: str
+    description: str
+    category: StyleRuleCategory
+    example_before: str
+    example_after: str
+    applicable_draft_types: List[DraftType] = Field(default_factory=list)
+    confidence: float
+    support_count: int = 1
+    last_updated: datetime
+
+
 class DraftResponse(BaseModel):
+    draft_id: str
     session_id: str
     draft_type: DraftType
     retrieval_query: str
     draft: str
     evidence: List[EvidenceItem]
+    applied_rules: List[AppliedStyleRule] = Field(default_factory=list)
     generated_at: datetime
+
+
+class StructuredDiffEntry(BaseModel):
+    operation: str
+    before: str = ""
+    after: str = ""
+
+
+class DraftFeedbackRequest(BaseModel):
+    edited_draft: str
+    operator_notes: Optional[str] = Field(
+        default=None,
+        description="Optional operator note, e.g. always cite section numbers",
+    )
+
+
+class DraftFeedbackResponse(BaseModel):
+    feedback_id: str
+    draft_id: str
+    extracted_rules: List[StyleRule] = Field(default_factory=list)
+    active_rules: List[StyleRule] = Field(default_factory=list)
+    structured_diff: List[StructuredDiffEntry] = Field(default_factory=list)
