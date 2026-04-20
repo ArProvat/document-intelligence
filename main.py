@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.models.api_schemas import (
     CreateSessionRequest,
@@ -23,6 +24,21 @@ from app.services.session_ingest_service import SessionIngestService
 from app.services.draft_generation import DraftGenerationService
 
 app = FastAPI(title="Legal Grounded Drafting API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 session_store = InMemorySessionStore()
 document_store = InMemoryDocumentStore()

@@ -1,5 +1,8 @@
-from langchain.retrievers import EnsembleRetriever, ContextualCompressionRetriever
-from langchain.retrievers.document_compressors import FlashrankRerank
+from langchain_classic.retrievers import EnsembleRetriever
+from langchain_classic.retrievers.contextual_compression import (
+    ContextualCompressionRetriever,
+)
+from langchain_community.document_compressors import FlashrankRerank
 
 from app.retrieval.vector_store import SessionVectorStore
 from app.retrieval.keyword_search import SessionBM25Store

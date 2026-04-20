@@ -35,10 +35,12 @@ class SessionVectorStore:
         self._get_store(session_id).add_documents(documents)
 
     def retriever(self, session_id: str, k: int = 10, fetch_k: int = 20):
+        # Chroma's default similarity retriever does not accept fetch_k.
+        # Keep the method signature stable for callers, but only pass kwargs
+        # that the underlying vector store supports here.
         return self._get_store(session_id).as_retriever(
             search_kwargs={
                 "k": k,
-                "fetch_k": fetch_k,
                 "filter": {"session_id": session_id},
             }
         )
