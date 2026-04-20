@@ -25,6 +25,18 @@ class StyleRuleCategory(str, Enum):
     OTHER = "other"
 
 
+class StyleRuleStatus(str, Enum):
+    ACTIVE = "active"
+    DISABLED = "disabled"
+
+
+class FeedbackJobStatus(str, Enum):
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
 class CreateSessionRequest(BaseModel):
     user_id: str = Field(..., description="Application user ID")
 
@@ -75,7 +87,13 @@ class StyleRule(BaseModel):
     applicable_draft_types: List[DraftType] = Field(default_factory=list)
     confidence: float
     support_count: int = 1
+    status: StyleRuleStatus = StyleRuleStatus.ACTIVE
     last_updated: datetime
+
+
+class RuleDeleteResponse(BaseModel):
+    rule_id: str
+    deleted: bool = True
 
 
 class DraftResponse(BaseModel):
@@ -106,6 +124,10 @@ class DraftFeedbackRequest(BaseModel):
 class DraftFeedbackResponse(BaseModel):
     feedback_id: str
     draft_id: str
+    status: FeedbackJobStatus
     extracted_rules: List[StyleRule] = Field(default_factory=list)
     active_rules: List[StyleRule] = Field(default_factory=list)
     structured_diff: List[StructuredDiffEntry] = Field(default_factory=list)
+    error_message: Optional[str] = None
+    submitted_at: datetime
+    processed_at: Optional[datetime] = None
