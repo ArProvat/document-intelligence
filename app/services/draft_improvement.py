@@ -308,9 +308,6 @@ Structured diff:
         best_score = 0.0
 
         for rule in existing_rules:
-            if rule.user_id != rule.user_id:
-                continue
-
             if rule.category != candidate.category:
                 continue
 

@@ -45,6 +45,21 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.secondary-button,
+.danger-button {
+  padding: 0.58rem 0.92rem;
+}
+
+.secondary-button {
+  background: rgba(24, 60, 85, 0.1);
+  color: #183c55;
+}
+
+.danger-button {
+  background: rgba(155, 39, 27, 0.12);
+  color: #8d251c;
+}
+
 input,
 select,
 textarea {
@@ -271,6 +286,13 @@ pre {
 
 .rule-card span {
   color: #63707a;
+}
+
+.rule-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 0.8rem;
 }
 
 .diff-grid {

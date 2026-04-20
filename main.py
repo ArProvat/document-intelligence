@@ -5,6 +5,7 @@ from typing import List
 
 from fastapi import BackgroundTasks, FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
 from app.models.api_schemas import (
     CreateSessionRequest,
@@ -101,7 +102,7 @@ async def upload_files(session_id: str, files: List[UploadFile] = File(...)):
             temp_path = Path(tmp.name)
 
         try:
-            processed = process_document(temp_path, upload.filename)
+            processed = await run_in_threadpool(process_document, temp_path, upload.filename)
             processed_docs.append(processed)
             document_store.save(processed)
             session_store.add_document(session_id, processed.doc_id)
@@ -125,7 +126,7 @@ async def upload_files(session_id: str, files: List[UploadFile] = File(...)):
         finally:
             temp_path.unlink(missing_ok=True)
 
-    ingest_service.ingest_processed_documents(session_id, processed_docs)
+    await run_in_threadpool(ingest_service.ingest_processed_documents, session_id, processed_docs)
 
     return SessionUploadResponse(
         session_id=session_id,
@@ -146,11 +147,12 @@ async def generate_draft(session_id: str, req: DraftRequest):
             detail="No documents uploaded for this session",
         )
 
-    return draft_service.generate_draft(
-        user_id=session.user_id,
-        session_id=session_id,
-        draft_type=req.draft_type,
-        instructions=req.instructions,
+    return await run_in_threadpool(
+        draft_service.generate_draft,
+        session.user_id,
+        session_id,
+        req.draft_type,
+        req.instructions,
     )
 
 

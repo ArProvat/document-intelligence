@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
@@ -51,15 +51,35 @@ function JsonPanel({ title, data }) {
   );
 }
 
-function RuleBadge({ rule }) {
+function RuleBadge({ rule, onDisable, onEnable, onDelete, busy }) {
+  const isDisabled = rule.status === "disabled";
+
   return (
     <article className="rule-card">
       <div className="rule-header">
         <strong>{rule.category}</strong>
-        <span>confidence {(rule.confidence ?? 0).toFixed(2)}</span>
+        <span>
+          {rule.status} | confidence {(rule.confidence ?? 0).toFixed(2)}
+        </span>
       </div>
       <p>{rule.description}</p>
       {"support_count" in rule ? <span>support {rule.support_count}</span> : null}
+      {onDisable || onEnable || onDelete ? (
+        <div className="rule-actions">
+          {isDisabled ? (
+            <button type="button" className="secondary-button" onClick={() => onEnable?.(rule)} disabled={busy}>
+              Enable
+            </button>
+          ) : (
+            <button type="button" className="secondary-button" onClick={() => onDisable?.(rule)} disabled={busy}>
+              Disable
+            </button>
+          )}
+          <button type="button" className="danger-button" onClick={() => onDelete?.(rule)} disabled={busy}>
+            Delete
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -105,6 +125,7 @@ function App() {
   const hasSession = Boolean(sessionId.trim());
   const hasDraft = Boolean(draftResponse?.draft_id);
   const selectedFileNames = selectedFiles.map((file) => file.name);
+  const pollingFeedback = feedbackResponse?.status === "pending" || feedbackResponse?.status === "processing";
 
   async function runAction(actionName, callback) {
     setBusyAction(actionName);
@@ -143,6 +164,34 @@ function App() {
       setStyleRules(data);
     });
   }
+
+  async function refreshFeedbackStatus(feedbackId) {
+    const response = await fetch(buildUrl(`/feedback/${feedbackId}`));
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      throw new Error(data.detail || "Failed to load feedback status");
+    }
+
+    setFeedbackResponse(data);
+    if (data.status === "completed") {
+      setStyleRules(data.active_rules || []);
+    }
+  }
+
+  useEffect(() => {
+    if (!pollingFeedback || !feedbackResponse?.feedback_id) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      refreshFeedbackStatus(feedbackResponse.feedback_id).catch((err) => {
+        setError(getErrorMessage(err));
+      });
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pollingFeedback, feedbackResponse?.feedback_id]);
 
   async function checkHealth() {
     await runAction("health", async () => {
@@ -195,7 +244,6 @@ function App() {
 
     await runAction("upload", async () => {
       const formData = new FormData();
-
       selectedFiles.forEach((file) => {
         formData.append("files", file);
       });
@@ -276,7 +324,27 @@ function App() {
       }
 
       setFeedbackResponse(data);
-      setStyleRules(data.active_rules || []);
+    });
+  }
+
+  async function changeRuleStatus(rule, action) {
+    await runAction(`rule-${action}`, async () => {
+      const method = action === "delete" ? "DELETE" : "POST";
+      const suffix = action === "delete" ? "" : `/${action}`;
+      const response = await fetch(
+        buildUrl(`/users/${encodeURIComponent(userId)}/style-rules/${rule.rule_id}${suffix}`),
+        { method },
+      );
+      const data = await parseJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.detail || `Failed to ${action} rule`);
+      }
+
+      await loadStyleRules();
+      if (feedbackResponse?.status === "completed") {
+        await refreshFeedbackStatus(feedbackResponse.feedback_id);
+      }
     });
   }
 
@@ -312,34 +380,24 @@ function App() {
               {busyAction === "health" ? "Checking..." : "Check Health"}
             </button>
           </div>
-
           <p className="panel-copy">
             Confirms the frontend can reach the FastAPI server through the local Vite proxy
             or the configured API base URL.
           </p>
-
           <JsonPanel title="Health Response" data={health} />
         </section>
 
         <section className="panel">
           <div className="panel-header">
             <h2>2. Session</h2>
-            <button
-              type="button"
-              onClick={createSession}
-              disabled={Boolean(busyAction) || !userId.trim()}
-            >
+            <button type="button" onClick={createSession} disabled={Boolean(busyAction) || !userId.trim()}>
               {busyAction === "session" ? "Creating..." : "Create Session"}
             </button>
           </div>
 
           <label className="field">
             <span>User ID</span>
-            <input
-              value={userId}
-              onChange={(event) => setUserId(event.target.value)}
-              placeholder="demo-user"
-            />
+            <input value={userId} onChange={(event) => setUserId(event.target.value)} placeholder="demo-user" />
           </label>
 
           <label className="field">
@@ -394,11 +452,7 @@ function App() {
         <section className="panel full-width">
           <div className="panel-header">
             <h2>4. Generate Draft</h2>
-            <button
-              type="button"
-              onClick={generateDraft}
-              disabled={Boolean(busyAction) || !hasSession}
-            >
+            <button type="button" onClick={generateDraft} disabled={Boolean(busyAction) || !hasSession}>
               {busyAction === "draft" ? "Generating..." : "Generate Draft"}
             </button>
           </div>
@@ -406,10 +460,7 @@ function App() {
           <div className="draft-grid">
             <label className="field">
               <span>Draft Type</span>
-              <select
-                value={draftType}
-                onChange={(event) => setDraftType(event.target.value)}
-              >
+              <select value={draftType} onChange={(event) => setDraftType(event.target.value)}>
                 {DRAFT_TYPES.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -495,18 +546,14 @@ function App() {
         <section className="panel full-width">
           <div className="panel-header">
             <h2>5. Operator Feedback</h2>
-            <button
-              type="button"
-              onClick={submitFeedback}
-              disabled={Boolean(busyAction) || !hasDraft}
-            >
+            <button type="button" onClick={submitFeedback} disabled={Boolean(busyAction) || !hasDraft}>
               {busyAction === "feedback" ? "Submitting..." : "Submit Feedback"}
             </button>
           </div>
 
           <p className="panel-copy">
-            Edit the generated draft the way a senior operator would. The backend stores the before/after pair,
-            extracts reusable style rules, and reuses them on future drafts for the same user.
+            Edit the generated draft the way a senior operator would. Feedback analysis now runs asynchronously,
+            so the request returns immediately and the UI polls until the learning job finishes.
           </p>
 
           <label className="field">
@@ -532,6 +579,23 @@ function App() {
           {feedbackResponse ? (
             <div className="draft-output">
               <section className="result-card">
+                <h3>Feedback Job</h3>
+                <div className="meta-list">
+                  <span>
+                    <strong>Feedback ID:</strong> {feedbackResponse.feedback_id}
+                  </span>
+                  <span>
+                    <strong>Status:</strong> {feedbackResponse.status}
+                  </span>
+                  {feedbackResponse.error_message ? (
+                    <span>
+                      <strong>Error:</strong> {feedbackResponse.error_message}
+                    </span>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="result-card">
                 <h3>Extracted Rules</h3>
                 {feedbackResponse.extracted_rules?.length ? (
                   <div className="rule-list">
@@ -540,7 +604,11 @@ function App() {
                     ))}
                   </div>
                 ) : (
-                  <p className="panel-copy">No reusable rules were extracted from this edit.</p>
+                  <p className="panel-copy">
+                    {pollingFeedback
+                      ? "Feedback is still processing."
+                      : "No reusable rules were extracted from this edit."}
+                  </p>
                 )}
               </section>
 
@@ -553,7 +621,9 @@ function App() {
                     ))}
                   </div>
                 ) : (
-                  <p className="panel-copy">No diff entries were recorded.</p>
+                  <p className="panel-copy">
+                    {pollingFeedback ? "Waiting for structured diff extraction." : "No diff entries were recorded."}
+                  </p>
                 )}
               </section>
             </div>
@@ -567,29 +637,32 @@ function App() {
         <section className="panel full-width">
           <div className="panel-header">
             <h2>6. Learned Rules</h2>
-            <button
-              type="button"
-              onClick={() => loadStyleRules()}
-              disabled={Boolean(busyAction) || !userId.trim()}
-            >
+            <button type="button" onClick={() => loadStyleRules()} disabled={Boolean(busyAction) || !userId.trim()}>
               {busyAction === "rules" ? "Loading..." : "Load Style Rules"}
             </button>
           </div>
 
           <p className="panel-copy">
-            Active rules are filtered by the current user ID and selected draft type. These are what the backend
-            injects under OPERATOR STYLE PREFERENCES during future generation.
+            Rules are listed with their current status. Disabled rules stay stored but are excluded from future
+            prompts until you re-enable them.
           </p>
 
           {styleRules.length ? (
             <div className="rule-list">
               {styleRules.map((rule) => (
-                <RuleBadge key={rule.rule_id} rule={rule} />
+                <RuleBadge
+                  key={rule.rule_id}
+                  rule={rule}
+                  busy={Boolean(busyAction)}
+                  onDisable={(selectedRule) => changeRuleStatus(selectedRule, "disable")}
+                  onEnable={(selectedRule) => changeRuleStatus(selectedRule, "enable")}
+                  onDelete={(selectedRule) => changeRuleStatus(selectedRule, "delete")}
+                />
               ))}
             </div>
           ) : (
             <p className="panel-copy">
-              No active rules loaded yet. Generate a draft, submit feedback, then load rules again.
+              No style rules loaded yet. Generate a draft, submit feedback, then load rules again.
             </p>
           )}
         </section>
