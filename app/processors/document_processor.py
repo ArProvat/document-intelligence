@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ...config import ALLOWED_EXTENSIONS, OCR_CONFIDENCE_THRESHOLD, MIN_TEXT_LENGTH_PER_PAGE
+from config import ALLOWED_EXTENSIONS, OCR_CONFIDENCE_THRESHOLD, MIN_TEXT_LENGTH_PER_PAGE
 from app.models.schemas import (
     ProcessedDocument, ProcessingWarning, ExtractionMethod, DocumentType,
 )

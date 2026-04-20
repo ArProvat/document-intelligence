@@ -8,7 +8,7 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import pytesseract
 
-from ...config import TESSERACT_LANG, TESSERACT_CONFIG, OCR_CONFIDENCE_THRESHOLD
+from config import TESSERACT_LANG, TESSERACT_CONFIG, OCR_CONFIDENCE_THRESHOLD
 from app.models.schemas import ExtractionMethod, PageResult
 from app.processors.text_cleaner import clean_text
 

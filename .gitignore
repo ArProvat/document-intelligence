@@ -1,0 +1,7 @@
+.env
+.venv
+pdf_storage
+__pycache__
+frontend/node_modules
+frontend/dist
+frontend/.npm-cache

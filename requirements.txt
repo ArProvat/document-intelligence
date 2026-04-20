@@ -11,8 +11,10 @@ Pillow
 numpy
 pydantic
 langchain
+langchain-classic
 langchain-community
 langchain-core
 langchain-openai
 langchain-chroma
+flashrank
 rank_bm25
