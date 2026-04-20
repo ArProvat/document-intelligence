@@ -116,6 +116,7 @@ def clean_text(raw_text: str) -> Tuple[str, list[str]]:
     # Detect if text looks like all uppercase (common scan artifact)
     upper_ratio = sum(c.isupper() for c in text if c.isalpha()) / max(
         sum(c.isalpha() for c in text), 1
+        
     )
     if upper_ratio > 0.85 and len(text) > 100:
         warnings.append("Text is mostly uppercase — may be a stylistic choice or OCR issue")
