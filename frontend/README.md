@@ -29,3 +29,4 @@ VITE_API_BASE_URL=http://localhost:8000
 ```
 
 - Sessions are stored in backend memory, so restarting the API invalidates previous session IDs.
+- The backend accepts `.pdf`, `.xlsx`, and common image formats.

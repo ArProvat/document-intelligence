@@ -1,7 +1,8 @@
 import logging
 from pathlib import Path
 from typing import List, Tuple
-
+from PIL import Image
+import io
 import fitz                          # PyMuPDF
 import pdfplumber
 from pdf2image import convert_from_path
@@ -127,8 +128,6 @@ def process_pdf(pdf_path: Path) -> Tuple[List[PageResult], ExtractionMethod]:
                 try:
                     mat  = fitz.Matrix(OCR_DPI / 72, OCR_DPI / 72)
                     pix  = doc[i].get_pixmap(matrix=mat, alpha=False)
-                    from PIL import Image
-                    import io
                     img  = Image.open(io.BytesIO(pix.tobytes("png")))
                     result = ocr_pil_image(img, page_number)
                 except Exception as exc:

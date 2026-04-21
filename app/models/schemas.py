@@ -1,32 +1,34 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
 
 
 class DocumentType(str, Enum):
-    LEASE_AGREEMENT   = "lease_agreement"
-    COURT_FILING      = "court_filing"
-    LEGAL_NOTICE      = "legal_notice"
-    INTERNAL_MEMO     = "internal_memo"
-    CONTRACT          = "contract"
-    TITLE_DOCUMENT    = "title_document"
-    CORRESPONDENCE    = "correspondence"
-    UNKNOWN           = "unknown"
+    LEASE_AGREEMENT = "lease_agreement"
+    COURT_FILING = "court_filing"
+    LEGAL_NOTICE = "legal_notice"
+    INTERNAL_MEMO = "internal_memo"
+    CONTRACT = "contract"
+    TITLE_DOCUMENT = "title_document"
+    CORRESPONDENCE = "correspondence"
+    UNKNOWN = "unknown"
 
 
 class ExtractionMethod(str, Enum):
-    NATIVE_TEXT = "native_text"   # PDF has real text layer
-    OCR_SCAN    = "ocr_scan"      # Scanned — OCR applied
-    OCR_IMAGE   = "ocr_image"     # Standalone image file
-    HYBRID      = "hybrid"        # Mixed: some pages native, some OCR
+    NATIVE_TEXT = "native_text"
+    OCR_SCAN = "ocr_scan"
+    OCR_IMAGE = "ocr_image"
+    MULTIMODAL_LLM = "multimodal_llm"
+    HYBRID = "hybrid"
 
 
 class PageResult(BaseModel):
     page_number: int
     raw_text: str
     cleaned_text: str
-    confidence: float = Field(..., ge=0.0, le=1.0, description="OCR confidence 0–1")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Extraction confidence from 0.0 to 1.0")
     extraction_method: ExtractionMethod
     word_count: int
     has_tables: bool = False
@@ -35,7 +37,7 @@ class PageResult(BaseModel):
 
 
 class ExtractedEntity(BaseModel):
-    entity_type: str       # date | party | amount | case_number | address
+    entity_type: str
     value: str
     normalized: Optional[str] = None
     page: int
@@ -66,26 +68,18 @@ class ProcessedDocument(BaseModel):
     file_type: str
     file_size_bytes: int
     processed_at: datetime
-
-    # Classification
     doc_type: DocumentType
     doc_type_confidence: float
-
-    # Extraction summary
     extraction_method: ExtractionMethod
     total_pages: int
     avg_confidence: float
     low_confidence_pages: List[int] = Field(default_factory=list)
-
-    # Content
     full_text: str
     pages: List[PageResult]
     entities: List[ExtractedEntity] = Field(default_factory=list)
     chunks: List[DocumentChunk] = Field(default_factory=list)
-
-    # Quality flags
     warnings: List[ProcessingWarning] = Field(default_factory=list)
-    is_usable: bool = True           # False if extraction failed badly
+    is_usable: bool = True
     quality_score: float = Field(..., ge=0.0, le=1.0)
 
 
