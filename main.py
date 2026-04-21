@@ -147,8 +147,7 @@ async def generate_draft(session_id: str, req: DraftRequest):
             detail="No documents uploaded for this session",
         )
 
-    return await run_in_threadpool(
-        draft_service.generate_draft,
+    return await draft_service.agenerate_draft(
         session.user_id,
         session_id,
         req.draft_type,
