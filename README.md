@@ -31,17 +31,13 @@ config.py         runtime settings
 README.md         setup and usage
 ARCHITECTURE.md   system design notes
 API_EXAMPLES.md   sample requests and responses
-approach.md       deeper implementation walkthrough
 ```
 
-## Main API Flow
+## Choose The Right Doc
 
-1. Create a session
-2. Upload one or more files into that session
-3. Generate a draft for a chosen draft type
-4. Submit an edited draft as feedback
-5. Poll feedback status
-6. Generate future drafts with learned rules applied
+- [README.md](</C:/Project/document_intelligence/README.md:1>) for setup and day-1 usage
+- [ARCHITECTURE.md](</C:/Project/document_intelligence/ARCHITECTURE.md:1>) for system design and internal flow
+- [API_EXAMPLES.md](</C:/Project/document_intelligence/API_EXAMPLES.md:1>) for request and response examples
 
 ## Supported Draft Types
 
@@ -76,7 +72,7 @@ Optional runtime knobs are defined in `config.py`, including:
 
 ## Quick Start With Docker
 
-This is the simplest way to run the API.
+This is the recommended way to run the API because OCR and PDF tooling need native system packages.
 
 ```powershell
 docker compose up --build
@@ -91,9 +87,12 @@ Notes:
 
 - Chroma, BM25, uploads, and processed artifacts are mounted into Docker volumes.
 - Session state is in memory, so active sessions reset when the container restarts.
-- Learned style rules persist on disk inside the container workspace.
+- Learned style rules are stored in `./draft_learning_store`.
+- In the current `docker-compose.yml`, `draft_learning_store` is not mounted as a named volume, so learned rules may be lost if the container is recreated or rebuilt.
 
 ## Local Backend Setup
+
+Use local setup only if you want to run outside Docker.
 
 ### 1. Create a virtual environment
 
@@ -108,7 +107,16 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-### 3. Start the API
+### 3. Install native OCR and PDF dependencies
+
+You also need native tools that Python packages do not install for you:
+
+- `Tesseract OCR`
+- `Poppler`
+
+On Windows, make sure both are installed and available on `PATH`.
+
+### 4. Start the API
 
 ```powershell
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
@@ -150,7 +158,7 @@ The frontend expects the backend on `http://localhost:8000`.
 
 See [API_EXAMPLES.md](</C:/Project/document_intelligence/API_EXAMPLES.md:1>) for sample payloads and responses.
 
-## Typical End-to-End Workflow
+## End-to-End Workflow
 
 ### 1. Create a session
 
@@ -172,44 +180,13 @@ A human operator refines the output.
 
 Send the edited draft and optional notes. The system extracts reusable style rules in the background.
 
-### 6. Generate again
+### 6. Poll feedback status
+
+Feedback processing is asynchronous. Submit feedback, then poll the feedback endpoint until it finishes.
+
+### 7. Generate again
 
 Future drafts for the same user and draft type will include the learned style rules in the prompt.
-
-## Processing Behavior
-
-### PDFs
-
-- Native text extraction with PyMuPDF where possible
-- OCR for scanned pages
-- table extraction with `pdfplumber`
-
-### Images
-
-- Tesseract OCR after preprocessing
-- OpenAI vision fallback for low-confidence or too-short OCR results
-
-### XLSX
-
-- worksheets treated as page-like units
-- rows stored as text and table data
-
-## Retrieval Strategy
-
-- Dense retrieval: OpenAI embeddings + Chroma
-- Sparse retrieval: BM25
-- Fusion: weighted ensemble
-- Final selection: Flashrank reranking
-
-## Grounded Drafting
-
-Drafts are generated from retrieved evidence blocks. The model is instructed to:
-
-- use only retrieved evidence
-- avoid inventing facts
-- call out missing or conflicting information
-
-This is not meant to replace legal review. It is a first-pass drafting and summarization system.
 
 ## Improvement Rules
 
@@ -223,13 +200,9 @@ That means:
 
 ## Persistence Model
 
-### In memory
-
 - session registry
 - session-to-document mapping
 - processed document store
-
-### On disk
 
 - Chroma data
 - BM25 source corpus
@@ -238,7 +211,8 @@ That means:
 If the server restarts:
 
 - uploaded session references reset
-- learned style rules remain available
+- Chroma and BM25 stay available if their volumes remain mounted
+- learned style rules remain available only if `draft_learning_store` is also persisted
 
 ## Validation And Useful Commands
 
@@ -255,13 +229,6 @@ Set-Location frontend
 npm run build
 ```
 
-## Recommended Reading Order
-
-1. [README.md](</C:/Project/document_intelligence/README.md:1>)
-2. [ARCHITECTURE.md](</C:/Project/document_intelligence/ARCHITECTURE.md:1>)
-3. [API_EXAMPLES.md](</C:/Project/document_intelligence/API_EXAMPLES.md:1>)
-4. [approach.md](</C:/Project/document_intelligence/approach.md:1>)
-
 ## Current Limitations
 
 - Session state is not persisted across restarts
@@ -272,6 +239,7 @@ npm run build
 ## Next Good Improvements
 
 - persistent session store
+- persist `draft_learning_store` in Docker
 - stronger scanned-table reconstruction
 - object storage for uploaded files
 - background job queue for ingestion and draft generation

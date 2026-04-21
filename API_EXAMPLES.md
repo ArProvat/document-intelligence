@@ -13,7 +13,7 @@ http://localhost:8000
 Request:
 
 ```powershell
-curl http://localhost:8000/health
+curl.exe http://localhost:8000/health
 ```
 
 Response:
@@ -29,7 +29,7 @@ Response:
 Request:
 
 ```powershell
-curl -X POST http://localhost:8000/sessions `
+curl.exe -X POST http://localhost:8000/sessions `
   -H "Content-Type: application/json" `
   -d "{\"user_id\":\"operator_001\"}"
 ```
@@ -50,7 +50,7 @@ Response:
 Request:
 
 ```powershell
-curl -X POST "http://localhost:8000/sessions/2e7d5d14-4348-4217-a779-545689326fe3/files" `
+curl.exe -X POST "http://localhost:8000/sessions/2e7d5d14-4348-4217-a779-545689326fe3/files" `
   -F "files=@C:\docs\sample_notice.pdf" `
   -F "files=@C:\docs\property_sheet.xlsx"
 ```
@@ -101,7 +101,7 @@ Response:
 Request:
 
 ```powershell
-curl -X POST "http://localhost:8000/sessions/2e7d5d14-4348-4217-a779-545689326fe3/drafts" `
+curl.exe -X POST "http://localhost:8000/sessions/2e7d5d14-4348-4217-a779-545689326fe3/drafts" `
   -H "Content-Type: application/json" `
   -d "{\"draft_type\":\"notice_related_summary\",\"instructions\":\"Focus on deadlines, issuing party, recipient, and missing service details.\"}"
 ```
@@ -152,7 +152,7 @@ This endpoint is asynchronous. It creates a feedback job and returns immediately
 Request:
 
 ```powershell
-curl -X POST "http://localhost:8000/drafts/720ff8cb-f46f-4d14-bd55-3aaf744da60a/feedback" `
+curl.exe -X POST "http://localhost:8000/drafts/720ff8cb-f46f-4d14-bd55-3aaf744da60a/feedback" `
   -H "Content-Type: application/json" `
   -d "{\"edited_draft\":\"Executive summary: ABC Finance Ltd. issued a legal notice to Rahim Traders concerning alleged payment default. The notice appears to set a cure deadline of 15 March 2026. The documents identify the issuer, recipient, and deadline, but do not clearly confirm service method. Always cite the date in the opening sentence when available.\",\"operator_notes\":\"Always open with a one-line summary and cite exact dates early.\"}"
 ```
@@ -193,7 +193,7 @@ Initial response:
 Request:
 
 ```powershell
-curl "http://localhost:8000/feedback/f3ab9671-dccd-47fa-8f3e-ccba3bd57619"
+curl.exe "http://localhost:8000/feedback/f3ab9671-dccd-47fa-8f3e-ccba3bd57619"
 ```
 
 Completed response:
@@ -272,7 +272,7 @@ Completed response:
 Request:
 
 ```powershell
-curl "http://localhost:8000/users/operator_001/style-rules?draft_type=notice_related_summary"
+curl.exe "http://localhost:8000/users/operator_001/style-rules?draft_type=notice_related_summary"
 ```
 
 Response:
@@ -301,7 +301,7 @@ Response:
 Request:
 
 ```powershell
-curl -X POST "http://localhost:8000/users/operator_001/style-rules/a44bca9f-3f5e-42c8-9f82-a963f66bfdd1/disable"
+curl.exe -X POST "http://localhost:8000/users/operator_001/style-rules/a44bca9f-3f5e-42c8-9f82-a963f66bfdd1/disable"
 ```
 
 Response:
@@ -328,7 +328,7 @@ Response:
 Request:
 
 ```powershell
-curl -X DELETE "http://localhost:8000/users/operator_001/style-rules/a44bca9f-3f5e-42c8-9f82-a963f66bfdd1"
+curl.exe -X DELETE "http://localhost:8000/users/operator_001/style-rules/a44bca9f-3f5e-42c8-9f82-a963f66bfdd1"
 ```
 
 Response:
@@ -371,4 +371,5 @@ Response:
 - `session_id` is session-scoped and temporary
 - style rules are stored user-wise, not session-wise
 - `POST /drafts/{draft_id}/feedback` is async and should be polled
+- examples use `curl.exe` for Windows PowerShell clarity
 - example IDs and timestamps here are illustrative
