@@ -25,7 +25,7 @@ Two design choices matter most:
 - feedback polling
 - style rule lifecycle operations
 
-Expensive sync work is pushed through `run_in_threadpool`, and feedback learning is processed with `BackgroundTasks`.
+Blocking document-processing and ingestion work is pushed through `run_in_threadpool`. Draft generation uses LangChain `ainvoke()` on the query chain, retriever, and draft chain. Feedback learning is processed with `BackgroundTasks`.
 
 ### Processing layer
 
@@ -243,13 +243,18 @@ Stored on disk:
 - BM25 source corpus
 - draft learning records
 
-This means the learning loop survives restarts better than the session layer.
+The code persists draft learning records in `./draft_learning_store`. In Docker, that path is not currently mounted as a named volume, so rule persistence is weaker than Chroma and BM25 persistence unless you add a volume for it.
 
 ## Operational Notes
 
 ### Async behavior
 
-The current system is not a full distributed job architecture, but it avoids blocking the FastAPI event loop for the heaviest operations.
+The current system is not a full distributed job architecture, but it avoids blocking the FastAPI event loop in two ways:
+
+- `run_in_threadpool` for blocking local work such as OCR, PDF parsing, and ingestion
+- async LangChain `ainvoke()` for the draft generation path
+
+Feedback learning is backgrounded in-process with `BackgroundTasks`.
 
 ### Failure surface
 
@@ -286,4 +291,4 @@ The code logs useful document-processing metadata such as:
 - hard guarantees for citation correctness
 - advanced scanned-table reconstruction
 
-For a deeper implementation walkthrough, see [approach.md](</C:/Project/document_intelligence/approach.md:1>).
+For request and response examples, see [API_EXAMPLES.md](</C:/Project/document_intelligence/API_EXAMPLES.md:1>).
